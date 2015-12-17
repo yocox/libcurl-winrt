@@ -260,8 +260,8 @@
 #  endif
 #  include <windows.h>
 #if  WINAPI_FAMILY == WINAPI_FAMILY_APP
-#      include <winrtsock.h>
-#      include <winrtsockEx.h>
+#      include <winsock2.h>
+#      include <ws2tcpip.h>
 #    else
 #  ifdef HAVE_WINSOCK2_H
 #    include <winsock2.h>

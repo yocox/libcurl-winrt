@@ -516,6 +516,11 @@
 //#  endif
 #endif
 
+#if defined(_MSC_VER) && (_MSC_VER >= 1900)
+#  undef _WIN32_WINNT
+#endif
+
+
 /* When no build target is specified Pelles C 5.00 and later default build
    target is Windows Vista. We override default target to be Windows 2000. */
 #if defined(__POCC__) && (__POCC__ >= 500)

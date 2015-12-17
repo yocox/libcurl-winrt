@@ -23,27 +23,7 @@
 #include "timeval.h"
 
 typedef ULONGLONG(WINAPI *PtrGetTickCount64)(void);
-static PtrGetTickCount64 ptrGetTickCount64 = 0;
-
-#if defined(WIN32) && !defined(MSDOS)
-
-
-#if  WINAPI_FAMILY == WINAPI_FAMILY_APP
-static void resolvetc64()
-{
-	static bool done = false;
-	if (done)
-		return;
-
-	int kernel32 = GetModuleHandleW(L"kernel32");
-
-
-	ptrGetTickCount64 = (PtrGetTickCount64)GetProcAddress(kernel32, "GetTickCount64");
-
-	done = true;
-}
-
-#endif
+static PtrGetTickCount64 ptrGetTickCount64 = GetTickCount64;
 
 struct timeval curlx_tvnow(void)
 {
@@ -55,7 +35,6 @@ struct timeval curlx_tvnow(void)
   struct timeval now;
 
   #if  WINAPI_FAMILY == WINAPI_FAMILY_APP
-  resolvetc64();
   DWORD milliseconds = ptrGetTickCount64();
   #else
   DWORD milliseconds = GetTickCount64();
@@ -66,68 +45,6 @@ struct timeval curlx_tvnow(void)
   return now;
 }
 
-#elif defined(HAVE_CLOCK_GETTIME_MONOTONIC)
-
-struct timeval curlx_tvnow(void)
-{
-  /*
-  ** clock_gettime() is granted to be increased monotonically when the
-  ** monotonic clock is queried. Time starting point is unspecified, it
-  ** could be the system start-up time, the Epoch, or something else,
-  ** in any case the time starting point does not change once that the
-  ** system has started up.
-  */
-  struct timeval now;
-  struct timespec tsnow;
-  if(0 == clock_gettime(CLOCK_MONOTONIC, &tsnow)) {
-    now.tv_sec = tsnow.tv_sec;
-    now.tv_usec = tsnow.tv_nsec / 1000;
-  }
-  /*
-  ** Even when the configure process has truly detected monotonic clock
-  ** availability, it might happen that it is not actually available at
-  ** run-time. When this occurs simply fallback to other time source.
-  */
-#ifdef HAVE_GETTIMEOFDAY
-  else
-    (void)gettimeofday(&now, NULL);
-#else
-  else {
-    now.tv_sec = (long)time(NULL);
-    now.tv_usec = 0;
-  }
-#endif
-  return now;
-}
-
-#elif defined(HAVE_GETTIMEOFDAY)
-
-struct timeval curlx_tvnow(void)
-{
-  /*
-  ** gettimeofday() is not granted to be increased monotonically, due to
-  ** clock drifting and external source time synchronization it can jump
-  ** forward or backward in time.
-  */
-  struct timeval now;
-  (void)gettimeofday(&now, NULL);
-  return now;
-}
-
-#else
-
-struct timeval curlx_tvnow(void)
-{
-  /*
-  ** time() returns the value of time in seconds since the Epoch.
-  */
-  struct timeval now;
-  now.tv_sec = (long)time(NULL);
-  now.tv_usec = 0;
-  return now;
-}
-
-#endif
 
 /*
  * Make sure that the first argument is the more recent time, as otherwise
